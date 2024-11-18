@@ -116,20 +116,20 @@
     <table>
         <tr>
             <th>Mes</th>
-            <th>Monto Capital (S/)</th>
-            <th>Interés (S/)</th>
             <th>Cuota Mensual (S/)</th>
-            <th>Saldo Capital (S/)</th>
+            <th>Interés (S/)</th>
+            <th>Monto Capital (S/)</th>
             <th>Seguro (S/)</th>
+            <th>Saldo Capital (S/)</th>
         </tr>
         <?php foreach ($_SESSION['cronograma_pagos'] as $pago) { ?>
             <tr>
                 <td><?php echo $pago['mes']; ?></td>
-                <td>S/ <?php echo $pago['monto_capital']; ?></td>
-                <td>S/ <?php echo $pago['interes']; ?> </td>
                 <td>S/ <?php echo $pago['cuota_mensual']; ?></td>
-                <td>S/ <?php echo $pago['saldo_capital']; ?> </td>
-                <td>S/ <?php echo $pago['seguro']; ?></td>
+                <td>S/ <?php echo $pago['interes']; ?> </td>
+                <td>S/ <?php echo $pago['monto_capital']; ?></td>
+                <td>S/ <?php echo $pago['seguro']; ?> </td>
+                <td>S/ <?php echo $pago['saldo_capital']; ?></td>
             </tr>
         <?php } ?>
     </table>
@@ -176,15 +176,13 @@
 
     <script>
         //INICIALIZAR
-        const base_url = "<?php echo CONTROLLERS . "Credito_VehicularController.php" ?>";
+        const base_url = "<?php echo CONTROLLERS . "Credito_HipotecarioController.php" ?>";
 
         $("#formCredito").submit(function(e) {
             e.preventDefault();
 
             let data = new FormData(e.target);
-            let cuota = <?php echo $_SESSION['cronograma_pagos'][0]['cuota_mensual']; ?>*2; // Calculamos el doble de la cuota
             data.append("accion", "insertar");
-            if (data.get("ingresoMensual") >= cuota){
                 $.ajax({
                 type: "POST",
                 url: base_url,
@@ -198,7 +196,7 @@
 
                     if (res.tipo == "success") {
                         alert("Se registro con exito")
-                        window.location.href = "<?php echo PAGES . "credito_vehicular/formulario_credito.php" ?>";
+                        window.location.href = "<?php echo PAGES . "credito_hipotecario/formulario_credito.php" ?>";
                     } else {
                         alert(res.texto);
                     }
@@ -206,10 +204,6 @@
 
                 }
             });
-            }else{
-                alert("Tu ingreso mensual es: " + data.get("ingresoMensual") + "y debe ser al menos el doble de la cuota mensual para continuar.");
-                return false; 
-            }
 
         });
     </script>

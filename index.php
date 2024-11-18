@@ -22,7 +22,7 @@
         <div class="card">
             <h3 class="card-title">Crédito Hipotecario</h3>
             <p class="card-text">Compra la casa de tus sueños con facilidades de pago.</p>
-            <a class="interest-button" href="<?php echo PAGES . "credito_vehicular/formulario_credito.php"; ?>">Me interesa</a>
+            <a class="interest-button" href="<?php echo PAGES . "credito_hipotecario/formulario_credito.php"; ?>">Me interesa</a>
         </div>
     </div>
 </section>

@@ -31,15 +31,14 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 
-
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitud de Crédito Hipotecario</title>
     <link href="https://fonts.googleapis.com/css2?family=KoHo&display=swap" rel="stylesheet">
-    <title>Formulario de Crédito Vehicular</title>
     <style>
         body {
             font-family: 'KoHo', sans-serif;
@@ -80,7 +79,7 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 
         .form-section {
             display: flex;
-            justify-content: space-between;
+            flex-wrap: wrap;
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -188,159 +187,205 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 </head>
 
 <body>
-
-    <!-- Header -->
     <header>
-        <h1>Crédito Vehicular</h1>
+        <h1>Credito Hipotecario</h1>
     </header>
-
-    <!-- Contenedor Principal -->
     <div class="container">
-        <h2>Formulario de Crédito Vehicular</h2>
+        <h2>Formulario Crédito Hipotecario</h2>
 
-        <!-- Formulario -->
-        <form id="formFormulario">
+        <form id="formFormulario" onsubmit="return verificarAdvertencia()">
+            <!-- Información del cliente -->
+            <label for="dni">DNI:</label>
+            <input type="text" id="dni" name="dni" required maxlength="8" inputmode="numeric" placeholder="Ingrese su DNI" pattern="^\d{8}$" title="Debe tener exactamente 8 dígitos y ser solo números" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)" />
 
-            <!-- Sección de Formularios en Tres Columnas -->
-            <div class="form-section">
+            <label for="nombre">Nombres:</label>
+            <input type="text" id="nombre" name="nombre" placeholder="Ingrese sus nombres" required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo se permiten letras" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')" />
 
-                <!-- Columna Datos del Cliente -->
-                <div class="form-column">
-                    <h3>Datos del Cliente</h3>
-
-                    <label for="dni">DNI:</label>
-                    <input type="text" id="dni" name="dni" required maxlength="8" inputmode="numeric" placeholder="Ingrese su DNI" pattern="^\d{8}$" title="Debe tener exactamente 8 dígitos y ser solo números" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)" />
-
-                    <label for="nombre">Nombres:</label>
-                    <input type="text" id="nombre" name="nombre" placeholder="Ingrese sus nombres" required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo se permiten letras" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')" />
-
-                    <label for="apellidos">Apellidos:</label>
-                    <input type="text" id="apellidos" name="apellidos" placeholder="Ingrese sus apellidos" required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo se permiten letras" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')" />
+            <label for="apellidos">Apellidos:</label>
+            <input type="text" id="apellidos" name="apellidos" placeholder="Ingrese sus apellidos" required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo se permiten letras" oninput="this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '')" />
 
 
-                    <label for="fechaNacimiento">Fecha de Nacimiento:</label>
-                    <input type="date" id="fechaNacimiento" name="fechaNacimiento" required onchange="validarMayorEdad(this)">
-                    <small id="fechaNacimientoError" style="color: red; display: none;">Debes ser mayor de edad.</small>
-
-
-                    <label for="direccion">Dirección:</label>
-                    <input type="text" id="direccion" placeholder="Ingrese su dirección" name="direccion" required>
-
-                    <label for="telefono">Teléfono:</label>
-                    <input type="text" id="telefono" name="telefono" placeholder="Ingrese su teléfono" required pattern="^9\d{8}$" maxlength="9" title="Debe contener exactamente 9 dígitos y comenzar con 9" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)" />
-
-                    <label for="correo">Correo Electrónico:</label>
-                    <input type="email" id="correo" name="correo" placeholder="Ingrese su correo electrónico" required>
-
-                    <label for="ingresoMensual">Ingreso Mensual:</label>
-                    <input type="number" id="ingresoMensual" placeholder="Ingrese su ingreso mensual" name="ingresoMensual" required min="1" title="Ingrese un valor mayor a 0">
-
-                    <label for="estadoCivil">Estado Civil:</label>
-                    <select id="estadoCivil" name="estadoCivil" required>
-                        <?php foreach ($estado_civil as $estado_civil) { ?>
-                            <option value="<?php echo $estado_civil['estado_civil_id']; ?>"><?php echo $estado_civil['descripcion']; ?></option>
-                        <?php } ?>
-                    </select>
-
-                    <label for="departamento">Departamento:</label>
-                    <select id="departamento" name="departamento" required>
-                        <option>Seleccione un departamento</option>
-                        <?php foreach ($departamentos as $departamentos) { ?>
-                            <option value="<?php echo $departamentos['departamento_id']; ?>"><?php echo $departamentos['nombre']; ?></option>
-                        <?php } ?>
-                    </select>
-
-                    <label for="provincia">Provincia:</label>
-                    <select id="provincia" name="provincia" required>
-                        <option>Seleccione una provincia</option>
-                    </select>
-
-                    <label for="distrito">Distrito:</label>
-                    <select id="distrito" name="distrito" required>
-                        <option>Seleccione un distrito</option>
-                    </select>
-                </div>
-
-                <!-- Columna Datos del Vehículo -->
-                <div class="form-column">
-                    <h3>Datos del Vehículo</h3>
-                    <label for="marca">Marca:</label>
-                    <select id="marca" name="marca" required>
-                        <option value="Toyota">Toyota</option>
-                        <option value="Honda">Honda</option>
-                        <option value="Ford">Ford</option>
-                        <option value="BMW">BMW</option>
-                        <option value="Chevrolet">Chevrolet</option>
-                        <option value="Volkswagen">Volkswagen</option>
-                        <option value="Nissan">Nissan</option>
-                        <option value="Mazda">Mazda</option>
-                    </select>
-
-                    <label for="modelo">Modelo:</label>
-                    <input type="text" id="modelo" name="modelo" placeholder="Ingrese su modelo" required>
-
-                    <label for="montoVehiculo">Monto del Vehículo:</label>
-                    <input type="number" id="montoVehiculo" name="montoVehiculo" placeholder="Ingrese su monto del vehiculo" required min="1" required>
-                </div>
-
-                <!-- Columna Datos del Crédito -->
-                <div class="form-column credit-section">
-                    <h3>Datos del Crédito</h3>
-                    <div class="credit-row">
-                        <label for="porcentajeCuotaInicial">Porcentaje de Cuota Inicial (%):</label>
-                        <input type="number" id="porcentajeCuotaInicial" name="porcentajeCuotaInicial" required min="1" title="Ingrese un valor mayor a 0">
-                    </div>
-
-                    <div class="credit-row">
-                        <label>Plazo de Crédito:</label>
-                        <div class="slider-container">
-                            <input type="range" id="plazoMeses" placeholder="Ingrese el plazo de crédito" name="plazoMeses" min="12" max="72" value="24" oninput="this.nextElementSibling.value = this.value">
-                            <output>24</output> meses
-                        </div>
-                    </div>
-
-                    <div class="credit-row">
-                        <label for="tipoSeguro">Tipo de Seguro:</label>
-                        <select id="tipoSeguro" name="tipoSeguro" required>
-                            <?php foreach ($seguros as $seguro) { ?>
-                                <?php if ($seguro['tipo_seguro_id'] == 1 && $seguro['tipo_seguro_id'] == 2) continue; ?>
-                                <option value="<?php echo $seguro['tipo_seguro_id']; ?>"><?php echo $seguro['descripcion']; ?></option>
-                            <?php } ?>
-                        </select>
-                    </div>
-                </div>
+            <div class="mb-3">
+                <label>Fecha de nacimiento:</label>
+                <input type="date" class="form-control" name="fechaNacimiento" id="fechaNacimiento" required
+                    onblur="validarEdad()">
+                <small id="edadAdvertencia" class="form-text text-danger" style="display: none;">
+                    Debe tener al menos 18 años para aplicar.
+                </small>
             </div>
 
-            <button type="submit" id="btnFormulario">Solicitar Crédito</button>
+            <div class="mb-3">
+                <label>Teléfono:</label>
+                <input type="text" class="form-control" name="telefono" required pattern="9\d{8}"
+                    maxlength="9" oninvalid="this.setCustomValidity('Ingrese un teléfono válido de 9 dígitos comenzando con 9.')"
+                    oninput="this.setCustomValidity('')" title="Debe contener exactamente 9 dígitos y comenzar con 9">
+            </div>
+            <div class="mb-3">
+                <label>Correo:</label>
+                <input type="email" class="form-control" name="correo" required placeholder="example@correo.com">
+            </div>
+            <div class="mb-3">
+                <label>Ingreso mensual:</label>
+                <input type="number" class="form-control" step="0.01" name="ingresoMensual" id="ingresoMensual" min="1500" required
+                    oninvalid="this.setCustomValidity('Para calificar, debe ganar al menos S/ 1500.')"
+                    oninput="this.setCustomValidity('')" placeholder="Para calificar debe ganar más o igual a S/1500">
+            </div>
+
+            <label for="estadoCivil">Estado Civil:</label>
+            <select id="estadoCivil" name="estadoCivil" required>
+                <?php foreach ($estado_civil as $estado_civil) { ?>
+                    <option value="<?php echo $estado_civil['estado_civil_id']; ?>"><?php echo $estado_civil['descripcion']; ?></option>
+                <?php } ?>
+            </select>
+
+            <!-- <div class="mb-3">
+                <label>Tipo de ingreso:</label>
+                <select name="tipo_ingreso" class="form-control" required>
+                    <option value="Dependiente">Dependiente</option>
+                    <option value="Independiente">Independiente</option>
+                    <option value="Mixto">Mixto</option>
+                </select>
+            </div> -->
+            <div class="mb-3">
+                <label>Dirección:</label>
+                <input type="text" class="form-control" name="direccion" required>
+            </div>
+            <!-- Departamento, Provincia y Distrito -->
+            <label for="departamento">Departamento:</label>
+            <select id="departamento" name="departamento" required>
+                <option>Seleccione un departamento</option>
+                <?php foreach ($departamentos as $departamentos) { ?>
+                    <option value="<?php echo $departamentos['departamento_id']; ?>"><?php echo $departamentos['nombre']; ?></option>
+                <?php } ?>
+            </select>
+
+            <label for="provincia">Provincia:</label>
+            <select id="provincia" name="provincia" required>
+                <option>Seleccione una provincia</option>
+            </select>
+
+            <label for="distrito">Distrito:</label>
+            <select id="distrito" name="distrito" required>
+                <option>Seleccione un distrito</option>
+            </select>
+
+            <!-- Información del crédito hipotecario -->
+            <div class="mb-3">
+                <label>Monto del crédito (S/):</label>
+                <input type="number" class="form-control" step="0.01" name="monto_credito" id="monto_credito" min="32000" required
+                    oninput="calcularCuotaInicial(); calcularTasa();" placeholder="Puedes financiarte desde S/ 32,000">
+            </div>
+            <div class="mb-3">
+                <label>Cuota inicial (10% del monto del crédito):</label>
+                <span class="highlight" name="cuota_inicial" id="cuota_inicial">0.00</span>
+            </div>
+
+            <div class="mb-3">
+                <label>Plazo del crédito (años):</label>
+                <input type="number" class="form-control" name="plazo_credito" min="4" max="25" required
+                    oninput="calcularTasa(); calcularCuotaMensual()" placeholder="De 4 a 25 años de plazo" id="plazo_credito">
+            </div>
+
+            <!-- Tipo de seguro -->
+            <div class="mb-3">
+                <label>Tipo de seguro:</label>
+                <select name="tipo_seguro" id="tipo_seguro" class="form-control" required>
+                    <option value="" disabled selected>Seleccione un seguro</option>
+                    <option value="Desgravamen">Seguro de desgravamen hipotecario</option>
+                    <option value="Inmueble">Seguro de inmueble</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Porcentaje de cobro del seguro:</label>
+                <input type="text" class="form-control" id="porcentaje_seguro" readonly>
+            </div>
+
+            <!-- <div class="mb-3">
+                <label>Proveedor del seguro:</label>
+                <input type="text" class="form-control" name="proveedor_seguro" value="Mapfre" readonly>
+            </div> -->
+
+            <!-- Tasa de interés -->
+            <div class="mb-3">
+                <label>Tasa de interés (%):</label>
+                <span id="tasa_interes"></span>
+            </div>
+
+            <div class="mb-3 text-danger" id="advertenciaCuota" style="display:none;">
+                La cuota mensual es igual o mayor al 50% de su ingreso mensual. Esto puede representar un riesgo financiero.
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Enviar Solicitud</button>
         </form>
-
-        <button type="button"><a style="text-decoration : none; color:white;" href="<?php echo PAGES . "credito_vehicular/consultas.php"; ?>">Consultar</a></button>
     </div>
-
     <?php include "../../modules/footer.php" ?>
 
-
     <script>
-        // Validar si es mayor de edad
-        function validarMayorEdad(input) {
-            const fechaNacimiento = new Date(input.value);
+        // Validación de la edad mínima de 18 años y otros scripts aquí
+        function validarEdad() {
+            const fechaNacimiento = new Date(document.getElementById('fechaNacimiento').value);
             const hoy = new Date();
-            const edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+            let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
             const mes = hoy.getMonth() - fechaNacimiento.getMonth();
-            const dia = hoy.getDate() - fechaNacimiento.getDate();
 
-            if (edad > 18 || (edad === 18 && (mes > 0 || (mes === 0 && dia >= 0)))) {
-                document.getElementById("fechaNacimientoError").style.display = "none";
-                input.setCustomValidity("");
+            if (mes < 0 || (mes === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+                edad--;
+            }
+
+            const advertencia = document.getElementById('edadAdvertencia');
+            if (edad < 18) {
+                advertencia.style.display = 'block';
+                return false;
             } else {
-                document.getElementById("fechaNacimientoError").style.display = "block";
-                input.setCustomValidity("Debes ser mayor de edad.");
+                advertencia.style.display = 'none';
+                return true;
             }
         }
 
+        // Calcula y muestra la cuota inicial
+        function calcularCuotaInicial() {
+            const monto = parseFloat(document.getElementById('monto_credito').value) || 0;
+            document.getElementById('cuota_inicial').textContent = (monto * 0.10).toFixed(2);
+        }
 
+        // Event listeners para tasa y porcentaje de seguro
+        document.getElementById('tipo_seguro').addEventListener('change', function() {
+            const porcentaje = (this.value === "Desgravamen") ? "1.5%" : "2%";
+            document.getElementById('porcentaje_seguro').value = porcentaje;
+        });
+
+        // Calcula y muestra la tasa de interés según el plazo
+        function calcularTasa() {
+            const plazo = parseInt(document.getElementById('plazo_credito').value);
+            let tasa = '';
+
+            if (plazo >= 4 && plazo <= 10) {
+                tasa = '10%';
+            } else if (plazo >= 11 && plazo <= 20) {
+                tasa = '12%';
+            } else if (plazo >= 21 && plazo <= 25) {
+                tasa = '14%';
+            }
+
+            document.getElementById('tasa_interes').textContent = tasa;
+        }
+
+        // Verifica que la cuota mensual no exceda el 50% del ingreso
+        function verificarAdvertencia() {
+            const ingresoMensual = parseFloat(document.getElementById('ingresoMensual').value);
+            const cuotaInicial = parseFloat(document.getElementById('cuota_inicial').textContent);
+
+            if (cuotaInicial >= ingresoMensual * 0.5) {
+                document.getElementById('advertenciaCuota').style.display = 'block';
+                return confirm("La cuota mensual es igual o mayor al 50% de su ingreso mensual. ¿Desea continuar?");
+            } else {
+                document.getElementById('advertenciaCuota').style.display = 'none';
+                return validarEdad();
+            }
+        }
         //INICIALIZAR
-        const base_url = " <?php echo CONTROLLERS . "Credito_VehicularController.php"; ?>";
+        const base_url = " <?php echo CONTROLLERS . "Credito_HipotecarioController.php"; ?>";
         const base_url_departamento = " <?php echo CONTROLLERS . "Provincia_Controller.php"; ?>";
         const base_url_provincia = " <?php echo CONTROLLERS . "Distrito_Controller.php"; ?>";
         const consulta_dni = " <?php echo CONTROLLERS . "ApiController.php"; ?>";
@@ -364,7 +409,7 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
                     // redireccionar a la página de confirmación
 
                     if (res.tipo == "success") {
-                        window.location.href = "<?php echo PAGES . "credito_vehicular/confirmacion_credito.php" ?>";
+                        window.location.href = "<?php echo PAGES . "credito_hipotecario/confirmacion_credito.php" ?>";
                     } else {
                         alert(res.texto);
                     }
@@ -488,16 +533,7 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 
 
         });
-
-        $("#nombre").keyup(function(e) {
-            $(this).val($(this).val().toUpperCase());
-        });
-
-        $("#apellidos").keyup(function(e) {
-            $(this).val($(this).val().toUpperCase());
-        });
     </script>
-
 
 </body>
 
