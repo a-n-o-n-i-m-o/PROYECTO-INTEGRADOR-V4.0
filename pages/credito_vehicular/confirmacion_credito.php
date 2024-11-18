@@ -182,10 +182,10 @@
             e.preventDefault();
 
             let data = new FormData(e.target);
-
+            let cuota = <?php echo $_SESSION['cronograma_pagos'][0]['cuota_mensual']; ?>*2; // Calculamos el doble de la cuota
             data.append("accion", "insertar");
-
-            $.ajax({
+            if (data.get("ingresoMensual") >= cuota){
+                $.ajax({
                 type: "POST",
                 url: base_url,
                 data: data,
@@ -205,6 +205,10 @@
 
                 }
             });
+            }else{
+                alert("Tu ingreso mensual es: " + data.get("ingresoMensual") + "y debe ser al menos el doble de la cuota mensual para continuar.");
+                return false; 
+            }
 
         });
     </script>

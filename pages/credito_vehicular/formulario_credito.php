@@ -207,53 +207,56 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
                 <!-- Columna Datos del Cliente -->
                 <div class="form-column">
                     <h3>Datos del Cliente</h3>
+
+                    <label for="dni">DNI:</label>
+                    <input type="text" id="dni" name="dni" required maxlength="8" inputmode="numeric" pattern="^\d{8}$" title="Debe tener exactamente 8 dígitos y ser solo números" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 8)" />
+                    
                     <label for="nombre">Nombre:</label>
                     <input type="text" id="nombre" name="nombre" required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo se permiten letras">
 
                     <label for="apellidos">Apellidos:</label>
                     <input type="text" id="apellidos" name="apellidos" required pattern="^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$" title="Solo se permiten letras">
 
-                    <label for="dni">DNI:</label>
-                    <input type="text" id="dni" name="dni" required pattern="^\d{8}$" title="Debe tener exactamente 8 dígitos">
-
                     <label for="fechaNacimiento">Fecha de Nacimiento:</label>
-                    <input type="date" id="fechaNacimiento" name="fechaNacimiento" required>
+                    <input type="date" id="fechaNacimiento" name="fechaNacimiento" required onchange="validarMayorEdad(this)">
+                    <small id="fechaNacimientoError" style="color: red; display: none;">Debes ser mayor de edad.</small>
+
 
                     <label for="direccion">Dirección:</label>
                     <input type="text" id="direccion" name="direccion" required>
 
                     <label for="telefono">Teléfono:</label>
-                    <input type="text" id="telefono" name="telefono" required pattern="^\d{9}$" title="Debe tener exactamente 9 dígitos">
+                    <input type="text" id="telefono" name="telefono" required pattern="^9\d{8}$" maxlength="9" title="Debe contener exactamente 9 dígitos y comenzar con 9" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 9)" />
 
                     <label for="correo">Correo Electrónico:</label>
                     <input type="email" id="correo" name="correo" required>
 
                     <label for="ingresoMensual">Ingreso Mensual:</label>
-                    <input type="number" id="ingresoMensual" name="ingresoMensual" required min="0" title="Ingrese un valor numérico válido">
+                    <input type="number" id="ingresoMensual" name="ingresoMensual" required min="1" title="Ingrese un valor mayor a 0">
 
                     <label for="estadoCivil">Estado Civil:</label>
                     <select id="estadoCivil" name="estadoCivil" required>
-                            <?php foreach ($estado_civil as $estado_civil) { ?>
-                                <option value="<?php echo $estado_civil['estado_civil_id']; ?>"><?php echo $estado_civil['descripcion']; ?></option>
-                            <?php } ?>
+                        <?php foreach ($estado_civil as $estado_civil) { ?>
+                            <option value="<?php echo $estado_civil['estado_civil_id']; ?>"><?php echo $estado_civil['descripcion']; ?></option>
+                        <?php } ?>
                     </select>
 
                     <label for="departamento">Departamento:</label>
                     <select id="departamento" name="departamento" required>
-                    <option>Seleccione un departamento</option>
-                            <?php foreach ($departamentos as $departamentos) { ?>
-                                <option value="<?php echo $departamentos['departamento_id']; ?>"><?php echo $departamentos['nombre']; ?></option>
-                            <?php } ?>
+                        <option>Seleccione un departamento</option>
+                        <?php foreach ($departamentos as $departamentos) { ?>
+                            <option value="<?php echo $departamentos['departamento_id']; ?>"><?php echo $departamentos['nombre']; ?></option>
+                        <?php } ?>
                     </select>
 
                     <label for="provincia">Provincia:</label>
                     <select id="provincia" name="provincia" required>
-                    <option>Seleccione una provincia</option>
+                        <option>Seleccione una provincia</option>
                     </select>
 
                     <label for="distrito">Distrito:</label>
                     <select id="distrito" name="distrito" required>
-                    <option>Seleccione un distrito</option>
+                        <option>Seleccione un distrito</option>
                     </select>
                 </div>
 
@@ -284,8 +287,8 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
                     <h3>Datos del Crédito</h3>
                     <div class="credit-row">
                         <label for="porcentajeCuotaInicial">Porcentaje de Cuota Inicial (%):</label>
-                        <input type="number" id="porcentajeCuotaInicial" name="porcentajeCuotaInicial" required>
-                    </div>
+                        <input type="number" id="porcentajeCuotaInicial" name="porcentajeCuotaInicial" required min="1" title="Ingrese un valor mayor a 0">
+                        </div>
 
                     <div class="credit-row">
                         <label>Plazo de Crédito:</label>
@@ -317,106 +320,184 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 
 
     <script>
+
+        // Validar si es mayor de edad
+        function validarMayorEdad(input) {
+            const fechaNacimiento = new Date(input.value);
+            const hoy = new Date();
+            const edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+            const mes = hoy.getMonth() - fechaNacimiento.getMonth();
+            const dia = hoy.getDate() - fechaNacimiento.getDate();
+
+            if (edad > 18 || (edad === 18 && (mes > 0 || (mes === 0 && dia >= 0)))) {
+                document.getElementById("fechaNacimientoError").style.display = "none";
+                input.setCustomValidity("");
+            } else {
+                document.getElementById("fechaNacimientoError").style.display = "block";
+                input.setCustomValidity("Debes ser mayor de edad.");
+            }
+        }
+
+
         //INICIALIZAR
         const base_url = " <?php echo CONTROLLERS . "Credito_VehicularController.php"; ?>";
         const base_url_departamento = " <?php echo CONTROLLERS . "Provincia_Controller.php"; ?>";
         const base_url_provincia = " <?php echo CONTROLLERS . "Distrito_Controller.php"; ?>";
-            $("#formFormulario").submit(function(e) {
+        const consulta_dni = " <?php echo CONTROLLERS . "ApiController.php"; ?>";
+
+        $("#formFormulario").submit(function(e) {
             e.preventDefault();
 
-            let data=new FormData(e.target);
+            let data = new FormData(e.target);
 
-            data.append("accion", "calcular" );
+            data.append("accion", "calcular");
 
             $.ajax({
-            type: "POST" ,
-            url: base_url,
-            data: data,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-            let res=JSON.parse(response);
+                type: "POST",
+                url: base_url,
+                data: data,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    let res = JSON.parse(response);
 
-            // redireccionar a la página de confirmación
+                    // redireccionar a la página de confirmación
 
-            if (res.tipo=="success" ) {
-            window.location.href="<?php echo PAGES . "credito_vehicular/confirmacion_credito.php" ?>" ;
-            } else {
-            alert(res.texto);
-            }
-
-
-            }
-            });
-
-            });
-
-            $("#departamento").change(function () {
-                
-                let distritosSelect = $("#distrito");
-                distritosSelect.empty(); // Limpiar el select
-                distritosSelect.append('<option value="">Seleccione un distrito</option>');
-
-                $.ajax({
-                    type: "POST",
-                    url: base_url_departamento + "?accion=buscar_departamento",
-                    data: { departamento_id: $("#departamento").val() },
-                    success: function (data) {
-                       
-                        let res = JSON.parse(data);
-                        
-                        console.log("Respuesta recibida:", res);
-
-                        let provinciasSelect = $("#provincia");
-                        provinciasSelect.empty(); // Limpiar el select
-                         
-                        if (Array.isArray(res) && res.length > 0) {
-                            provinciasSelect.append('<option value="">Seleccione una provincia</option>');
-
-                            res.forEach(function (provincia) {
-                                provinciasSelect.append('<option value="' + provincia.provincia_id + '">' + provincia.nombre + '</option>');
-                            });}
-                    },
-                    error: function (xhr, status, error) {
-                        console.error("Error en la solicitud:", status, error);
+                    if (res.tipo == "success") {
+                        window.location.href = "<?php echo PAGES . "credito_vehicular/confirmacion_credito.php" ?>";
+                    } else {
+                        alert(res.texto);
                     }
-                });
+
+
+                }
             });
-            
-            //DISTRITO BUSCAR 
 
-            $("#provincia").change(function () {
-              
-              $.ajax({
-                  type: "POST",
-                  url: base_url_provincia + "?accion=buscar_provincia",
-                  data: { provincia_id: $("#provincia").val() },
-                  success: function (data) {
-                     
-                      let res = JSON.parse(data);
-                      
-                      console.log("Respuesta recibida:", res);
+        });
 
-                      let distritosSelect = $("#distrito");
-                      distritosSelect.empty(); // Limpiar el select
+        $("#departamento").change(function() {
 
-                      if (Array.isArray(res) && res.length > 0) {
+            let distritosSelect = $("#distrito");
+            distritosSelect.empty(); // Limpiar el select
+            distritosSelect.append('<option value="">Seleccione un distrito</option>');
+
+            $.ajax({
+                type: "POST",
+                url: base_url_departamento + "?accion=buscar_departamento",
+                data: {
+                    departamento_id: $("#departamento").val()
+                },
+                success: function(data) {
+
+                    let res = JSON.parse(data);
+
+                    console.log("Respuesta recibida:", res);
+
+                    let provinciasSelect = $("#provincia");
+                    provinciasSelect.empty(); // Limpiar el select
+
+                    if (Array.isArray(res) && res.length > 0) {
+                        provinciasSelect.append('<option value="">Seleccione una provincia</option>');
+
+                        res.forEach(function(provincia) {
+                            provinciasSelect.append('<option value="' + provincia.provincia_id + '">' + provincia.nombre + '</option>');
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error en la solicitud:", status, error);
+                }
+            });
+        });
+
+        //DISTRITO BUSCAR 
+
+        $("#provincia").change(function() {
+
+            $.ajax({
+                type: "POST",
+                url: base_url_provincia + "?accion=buscar_provincia",
+                data: {
+                    provincia_id: $("#provincia").val()
+                },
+                success: function(data) {
+
+                    let res = JSON.parse(data);
+
+                    console.log("Respuesta recibida:", res);
+
+                    let distritosSelect = $("#distrito");
+                    distritosSelect.empty(); // Limpiar el select
+
+                    if (Array.isArray(res) && res.length > 0) {
                         distritosSelect.append('<option value="">Seleccione un distrito</option>');
 
-                          res.forEach(function (distrito) {
-                             distritosSelect.append('<option value="' + distrito.distrito_id + '">' + distrito.nombre + '</option>');
-                          });}
-                  },
-                  error: function (xhr, status, error) {
-                      console.error("Error en la solicitud:", status, error);
-                  }
-              });
-          });
+                        res.forEach(function(distrito) {
+                            distritosSelect.append('<option value="' + distrito.distrito_id + '">' + distrito.nombre + '</option>');
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error en la solicitud:", status, error);
+                }
+            });
+        });
+
+        $("#dni").change(function(e) {
+            $.ajax({
+                type: "POST",
+                url: consulta_dni, // URL donde realizas la consulta
+                data: {
+                    dni: $("#dni").val() // El valor del DNI ingresado
+                },
+                success: function(data) {
+                    let res = JSON.parse(data);
+
+                    // Verificamos si res.data existe y tiene valores válidos
+                    if (res.data && res.data !== "") {
+                        let datos = JSON.parse(res.data);
+
+                        // Verifica si los datos de nombre y apellidos están definidos y no son vacíos
+                        if (datos.nombres && datos.apellidoPaterno && datos.apellidoMaterno) {
+                            // Si los datos son válidos, llenamos los campos
+                            $("#nombre").val(datos.nombres);
+                            $("#apellidos").val(datos.apellidoPaterno + " " + datos.apellidoMaterno);
+                        } else {
+                            // Si faltan datos de nombre o apellidos, muestra un mensaje de alerta
+                            alert("Porfavor, ingrese manualmente sus datos.");
+                            $("#nombre").val('');
+                            $("#apellidos").val('');
+                        }
+                    } else {
+                        // Si no se encuentra información para el DNI
+                        alert("No se encontraron datos para el DNI proporcionado.");
+                        $("#nombre").val('');
+                        $("#apellidos").val('');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    // Muestra un mensaje de error si hay un problema con la solicitud AJAX
+                    alert("Ocurrió un error al consultar el DNI. Intenta nuevamente.");
+                    console.error("Error en la solicitud:", status, error);
+                }
+            });
 
 
 
 
-            </script>
+
+
+        });
+
+        $("#nombre").keyup(function(e) {
+            $(this).val($(this).val().toUpperCase());
+        });
+
+        $("#apellidos").keyup(function(e) {
+            $(this).val($(this).val().toUpperCase());
+        });
+
+    </script>
 
 
 </body>

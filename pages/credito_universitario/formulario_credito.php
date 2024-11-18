@@ -185,7 +185,7 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
         <h1>Formulario de Crédito Vehicular</h1>
     </header>
     <div class="container">
-        <form class="form" action="/app/controllers/generarCronograma.php" method="post">
+        <form class="form" id="formFormulario" >
             <section>
                 <h2>Datos Personales del Solicitante</h2>
                 <div class="form-section">
@@ -198,7 +198,10 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 
                         <label for="dni">DNI</label>
                         <input type="text" id="dni" name="dni" placeholder="Ingrese su DNI" required>
-                        
+
+                        <label for="fechaNacimiento">Fecha de Nacimiento:</label>
+                        <input type="date" id="fechaNacimiento" name="fechaNacimiento" required>
+
                         <label for="telefono">Teléfono:</label>
                         <input type="text" id="telefono" name="telefono" placeholder="Ingrese su n°telefono" required pattern="^\d{9}$" title="Debe tener exactamente 9 dígitos">
 
@@ -207,6 +210,31 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 
                         <label for="direccion">Dirección</label>
                         <input type="text" id="direccion" name="direccion" placeholder="Ingrese su dirección" required>
+
+                        <label for="estadoCivil">Estado Civil:</label>
+                        <select id="estadoCivil" name="estadoCivil" required>
+                                <?php foreach ($estado_civil as $estado_civil) { ?>
+                                    <option value="<?php echo $estado_civil['estado_civil_id']; ?>"><?php echo $estado_civil['descripcion']; ?></option>
+                                <?php } ?>
+                        </select>
+
+                        <label for="departamento">Departamento:</label>
+                        <select id="departamento" name="departamento" required>
+                        <option>Seleccione un departamento</option>
+                                <?php foreach ($departamentos as $departamentos) { ?>
+                                    <option value="<?php echo $departamentos['departamento_id']; ?>"><?php echo $departamentos['nombre']; ?></option>
+                                <?php } ?>
+                        </select>
+
+                        <label for="provincia">Provincia:</label>
+                        <select id="provincia" name="provincia" required>
+                        <option>Seleccione una provincia</option>
+                        </select>
+
+                        <label for="distrito">Distrito:</label>
+                        <select id="distrito" name="distrito" required>
+                        <option>Seleccione un distrito</option>
+                        </select>
                     </div>
                 </div>
             </section>
@@ -223,8 +251,8 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
 
                         <label for="ciclo">Ciclo Actual</label>
                         <select id="ciclo" name="ciclo" required>
-                            <option value="" disabled selected>Seleccione el ciclo</option>
-                            <option value="1" selected>Ciclo 1</option>
+                            <option value="" selected>Seleccione el ciclo</option>
+                            <option value="1">Ciclo 1</option>
                             <option value="2">Ciclo 2</option>
                             <option value="3">Ciclo 3</option>
                             <option value="4">Ciclo 4</option>
@@ -275,16 +303,18 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
                             <option value="60">60 meses</option>
                         </select>
 
-                        <label for="tea">TEA (%)</label>
-                        <input type="number" id="tea" name="tea" placeholder="Insertar correctamente los valores previos">
-                        <input type="number" id="seguroPorcentaje" name="seguroPorcentaje" placeholder="Indique el porcentaje del seguro">
-
                         <label for="seguroPorcentaje">Porcentaje del Seguro</label>
                         <input type="number" id="seguroPorcentaje" name="seguroPorcentaje" placeholder="Indique el porcentaje del seguro">
 
-                        <div class="checkbox-group">
-                        <input type="checkbox" id="seguroDesgravamen" name="seguroDesgravamen">
-                        <label for="seguroDesgravamen">Incluir Seguro de Desgravamen</label>
+                        <div class="credit-row">
+                        <label for="tipoSeguro">Tipo de Seguro:</label>
+                        <select id="tipoSeguro" name="tipoSeguro" required>
+                            <?php foreach ($seguros as $seguro) { ?>
+                                <?php if ($seguro['tipo_seguro_id'] == 1 && $seguro['tipo_seguro_id'] == 2) continue; ?>
+                                <option value="<?php echo $seguro['tipo_seguro_id']; ?>"><?php echo $seguro['descripcion']; ?></option>
+                            <?php } ?>
+                        </select>
+                        </div>
                         </div>
                 </div>
             </section>
@@ -292,9 +322,110 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
             <button type="submit">Generar Cronograma</button>
         </form>
     </div>
+    <?php include "../../modules/footer.php" ?>
 
-    <footer>
-        <p>&copy; 2024 Crédito Vehicular. Todos los derechos reservados.</p>
-    </footer>
+    <script>
+        //INICIALIZAR
+        const base_url = " <?php echo CONTROLLERS . "Credito_VehicularController.php"; ?>";
+        const base_url_departamento = " <?php echo CONTROLLERS . "Provincia_Controller.php"; ?>";
+        const base_url_provincia = " <?php echo CONTROLLERS . "Distrito_Controller.php"; ?>";
+            $("#formFormulario").submit(function(e) {
+            e.preventDefault();
+
+            let data=new FormData(e.target);
+
+            data.append("accion", "calcular" );
+
+            $.ajax({
+            type: "POST" ,
+            url: base_url,
+            data: data,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+            let res=JSON.parse(response);
+
+            // redireccionar a la página de confirmación
+
+            if (res.tipo=="success" ) {
+            window.location.href="<?php echo PAGES . "credito_vehicular/confirmacion_credito.php" ?>" ;
+            } else {
+            alert(res.texto);
+            }
+
+
+            }
+            });
+
+            });
+
+            $("#departamento").change(function () {
+                
+                let distritosSelect = $("#distrito");
+                distritosSelect.empty(); // Limpiar el select
+                distritosSelect.append('<option value="">Seleccione un distrito</option>');
+
+                $.ajax({
+                    type: "POST",
+                    url: base_url_departamento + "?accion=buscar_departamento",
+                    data: { departamento_id: $("#departamento").val() },
+                    success: function (data) {
+                       
+                        let res = JSON.parse(data);
+                        
+                        console.log("Respuesta recibida:", res);
+
+                        let provinciasSelect = $("#provincia");
+                        provinciasSelect.empty(); // Limpiar el select
+                         
+                        if (Array.isArray(res) && res.length > 0) {
+                            provinciasSelect.append('<option value="">Seleccione una provincia</option>');
+
+                            res.forEach(function (provincia) {
+                                provinciasSelect.append('<option value="' + provincia.provincia_id + '">' + provincia.nombre + '</option>');
+                            });}
+                    },
+                    error: function (xhr, status, error) {
+                        console.error("Error en la solicitud:", status, error);
+                    }
+                });
+            });
+            
+            //DISTRITO BUSCAR 
+
+            $("#provincia").change(function () {
+              
+              $.ajax({
+                  type: "POST",
+                  url: base_url_provincia + "?accion=buscar_provincia",
+                  data: { provincia_id: $("#provincia").val() },
+                  success: function (data) {
+                     
+                      let res = JSON.parse(data);
+                      
+                      console.log("Respuesta recibida:", res);
+
+                      let distritosSelect = $("#distrito");
+                      distritosSelect.empty(); // Limpiar el select
+
+                      if (Array.isArray(res) && res.length > 0) {
+                        distritosSelect.append('<option value="">Seleccione un distrito</option>');
+
+                          res.forEach(function (distrito) {
+                             distritosSelect.append('<option value="' + distrito.distrito_id + '">' + distrito.nombre + '</option>');
+                          });}
+                  },
+                  error: function (xhr, status, error) {
+                      console.error("Error en la solicitud:", status, error);
+                  }
+              });
+          });
+
+
+
+
+            </script>
+
+    
 </body>
 </html>
