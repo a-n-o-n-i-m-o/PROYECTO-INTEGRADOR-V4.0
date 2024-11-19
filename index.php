@@ -13,7 +13,6 @@
             <a class="interest-button" href="<?php echo PAGES . "credito_vehicular/formulario_credito.php"; ?>">Me interesa</a>
 
         </div>
-
         <div class="card">
             <h3 class="card-title">Crédito Universitario</h3>
             <p class="card-text">Financia tus estudios con cuotas accesibles.</p>
@@ -34,7 +33,7 @@
         <div class="card">
             <h3 class="card-title">Plazo Fijo</h3>
             <p class="card-text">Ahorra con tasas preferenciales y asegura tu futuro.</p>
-            <a class="interest-button" href="<?php echo PAGES . "credito_vehicular/formulario_credito.php"; ?>">Me interesa</a>
+            <a class="interest-button" href="<?php echo PAGES . "plazo_fijo/formulario_plazo.php"; ?>">Me interesa</a>
         </div>
     </div>
 </section>
