@@ -152,8 +152,8 @@ require_once "../../config/config.php";
     <div class='buttons'>
         <button type="button" onclick="history.back()" class="cancel">Regresar</button>
 
-        <form method="POST" action="../controllers/generar_pdf.php" target="_blank">
-            <input type="hidden" name="cronograma" value="' . htmlspecialchars(serialize($cronograma_pagos)) . '">
+        <form method="POST" action="../../../SISTEMA-FINANCIERO/controller/generar_pdf_v.php" target="_blank">
+            <input type="hidden" name="cronograma" value='<?php echo htmlspecialchars(serialize($_SESSION['cronograma_pagos'])); ?>'>
             <button type="submit" name="generar_pdf">Generar PDF</button>
         </form>
     </div>

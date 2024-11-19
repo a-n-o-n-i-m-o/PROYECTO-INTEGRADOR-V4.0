@@ -277,7 +277,7 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
             </div>
             <div class="mb-3">
                 <label>Cuota inicial (10% del monto del crédito):</label>
-                <span class="highlight" name="cuota_inicial" id="cuota_inicial">0.00</span>
+                <input type="text" class="highlight" name="cuota_inicial" id="cuota_inicial" value="0.00">
             </div>
 
             <div class="mb-3">
@@ -287,12 +287,13 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
             </div>
 
             <!-- Tipo de seguro -->
-            <div class="mb-3">
-                <label>Tipo de seguro:</label>
-                <select name="tipo_seguro" id="tipo_seguro" class="form-control" required>
-                    <option value="" disabled selected>Seleccione un seguro</option>
-                    <option value="Desgravamen">Seguro de desgravamen hipotecario</option>
-                    <option value="Inmueble">Seguro de inmueble</option>
+            <div class="credit-row">
+                <label for="tipoSeguro">Tipo de Seguro:</label>
+                <select id="tipoSeguro" name="tipo_seguro" required>
+                    <?php foreach ($seguros as $seguro) { ?>
+                        <?php if ($seguro['tipo_seguro_id'] == 1 && $seguro['tipo_seguro_id'] == 2) continue; ?>
+                        <option value="<?php echo $seguro['tipo_seguro_id']; ?>"><?php echo $seguro['descripcion']; ?></option>
+                    <?php } ?>
                 </select>
             </div>
 
@@ -309,7 +310,7 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
             <!-- Tasa de interés -->
             <div class="mb-3">
                 <label>Tasa de interés (%):</label>
-                <span id="tasa_interes"></span>
+                <input type="text" id="tasa_interes" name="tasa_interes">
             </div>
 
             <div class="mb-3 text-danger" id="advertenciaCuota" style="display:none;">
@@ -317,6 +318,7 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
             </div>
 
             <button type="submit" class="btn btn-primary w-100">Enviar Solicitud</button>
+            <button type="button"><a style="text-decoration : none; color:white;" href="<?php echo PAGES . "credito_hipotecario/consultas.php"; ?>">Consultar</a></button>
         </form>
     </div>
     <?php include "../../modules/footer.php" ?>
@@ -346,31 +348,60 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
         // Calcula y muestra la cuota inicial
         function calcularCuotaInicial() {
             const monto = parseFloat(document.getElementById('monto_credito').value) || 0;
-            document.getElementById('cuota_inicial').textContent = (monto * 0.10).toFixed(2);
+            console.log(`Monto ingresado: ${monto}`);
+            document.getElementById('cuota_inicial').value = (monto * 0.10).toFixed(2);
         }
 
+
         // Event listeners para tasa y porcentaje de seguro
-        document.getElementById('tipo_seguro').addEventListener('change', function() {
-            const porcentaje = (this.value === "Desgravamen") ? "1.5%" : "2%";
+        // Event listener para el cambio de tipo de seguro
+        document.getElementById('tipoSeguro').addEventListener('change', function() {
+            const tipoSeguroId = parseInt(this.value, 10); // Convierte el valor a entero
+            let porcentaje = ""; // Inicializa el porcentaje
+
+            // Lógica para asignar el porcentaje según el tipo de seguro
+            if (tipoSeguroId === 3) {
+                porcentaje = "1.5%";
+            } else if (tipoSeguroId === 4) {
+                porcentaje = "2%";
+            } else {
+                porcentaje = "No aplica"; // Valor por defecto si no es 3 o 4
+            }
+
+            // Asigna el porcentaje al campo correspondiente
             document.getElementById('porcentaje_seguro').value = porcentaje;
         });
 
         // Calcula y muestra la tasa de interés según el plazo
         function calcularTasa() {
+            // Obtener el valor del plazo ingresado
             const plazo = parseInt(document.getElementById('plazo_credito').value);
-            let tasa = '';
+            let tasaTexto = '';
+            let tasaValor = 0; // Variable para almacenar la tasa como número
 
-            if (plazo >= 4 && plazo <= 10) {
-                tasa = '10%';
-            } else if (plazo >= 11 && plazo <= 20) {
-                tasa = '12%';
-            } else if (plazo >= 21 && plazo <= 25) {
-                tasa = '14%';
+            // Verificar si el plazo es válido
+            if (!isNaN(plazo)) {
+                if (plazo >= 4 && plazo <= 10) {
+                    tasaTexto = '10%';
+                    tasaValor = 10; // Tasa en formato numérico
+                } else if (plazo >= 11 && plazo <= 20) {
+                    tasaTexto = '12%';
+                    tasaValor = 12;
+                } else if (plazo >= 21 && plazo <= 25) {
+                    tasaTexto = '14%';
+                    tasaValor = 14;
+                } else {
+                    tasaTexto = 'Plazo fuera de rango';
+                    tasaValor = 0;
+                }
             }
 
-            document.getElementById('tasa_interes').textContent = tasa;
-        }
+            // Asignar la tasa en formato de texto al campo de tasa de interés
+            document.getElementById('tasa_interes').value = tasaValor;
 
+            // Aquí puedes usar tasaValor para cálculos posteriores, ya que es un número
+            // Ejemplo: console.log("La tasa como número es:", tasaValor);
+        }
         // Verifica que la cuota mensual no exceda el 50% del ingreso
         function verificarAdvertencia() {
             const ingresoMensual = parseFloat(document.getElementById('ingresoMensual').value);
@@ -405,11 +436,14 @@ $estado_civil = $pdo->query($sqlEstado_civil)->fetchAll(PDO::FETCH_ASSOC);
                 contentType: false,
                 success: function(response) {
                     let res = JSON.parse(response);
+                    console.log(res.texto2);
 
                     // redireccionar a la página de confirmación
 
                     if (res.tipo == "success") {
                         window.location.href = "<?php echo PAGES . "credito_hipotecario/confirmacion_credito.php" ?>";
+                        console.log("Respuesta del servidor:", response);
+
                     } else {
                         alert(res.texto);
                     }

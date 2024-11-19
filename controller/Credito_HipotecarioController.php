@@ -27,6 +27,7 @@ $datos = array(
     "monto_credito"  => $_POST['monto_credito'] ?? null,
     "cuotaInicial"      => $_POST['cuota_inicial'] ?? null,
     "plazo"             => $_POST['plazo_credito'] ?? null,
+    "tasa_interes"        => $_POST['tasa_interes'] ?? null,
 );
 
 //verificando a cual accion tomar
@@ -47,81 +48,365 @@ switch ($accion) {
         break;
 }
 
+function buscar($pdo, $tabla, $datos)
+{
+    $sql = $pdo->prepare("SELECT * FROM $tabla c INNER JOIN creditos_hipotecarios ch ON c.cliente_id = ch.id_cliente  INNER JOIN seguros s ON ch.id_credito_hipotecario = s.id_credito_hipotecario WHERE c.dni = :dni");
+    $sql->bindParam(':dni', $datos['dni']);
+    $sql->execute();
+    $cliente = $sql->fetch(PDO::FETCH_ASSOC);
 
-function calculosCredito($datos) {
-    // Paso 1: Obtener el monto y cuota inicial
-    $montoCredito = $datos['monto_credito'];
-    $cuotaInicialPorcentaje = $datos['cuotaInicial'] / 100; // Convertir el porcentaje de la cuota inicial a valor decimal
-    $plazo = $datos['plazo']; // El plazo en años (se espera que esté en años)
-
-    // Paso 2: Calcular Monto Capital (restando la cuota inicial)
-    $cuotaInicialSoles = $montoCredito * $cuotaInicialPorcentaje;
-    $montoCapital = $montoCredito - $cuotaInicialSoles; // Monto Capital es el monto total menos la cuota inicial
-
-    // Paso 3: Calcular TEA y convertir a TEM (Tasa Efectiva Mensual)
-    $tea = 0.15; // TEA siempre es 15% (0.15)
-    $tem = pow(1 + $tea, 1 / 12) - 1; // TEM es la tasa efectiva mensual
-
-    // Paso 4: Convertir plazo de años a meses
-    $plazoMeses = $plazo * 12; // Convertir el plazo de años a meses
-
-    // Paso 5: Verificar que el plazo y el monto sean válidos para evitar división por cero
-    if ($plazoMeses <= 0 || $montoCapital <= 0) {
-        return "Error: El plazo y el monto deben ser mayores que cero.";
+    if ($cliente) {
+        $msg = array(
+            "tipo"  => "success",
+            "data" => $cliente
+        );
+    } else {
+        $msg = array(
+            "tipo"  => "error",
+            "texto" => "No se encontró al cliente"
+        );
     }
-
-    // Paso 6: Calcular la cuota mensual usando la fórmula de amortización
-    $cuotaMensual = $montoCapital * ($tem / (1 - pow(1 + $tem, -$plazoMeses)));
-
-    // Paso 7: Calcular el Monto Total a Pagar
-    $interesTotal = 0;
-    $saldoCapital = $montoCapital;
-    for ($mes = 1; $mes <= $plazoMeses; $mes++) {
-        // Calcular el interés mensual y el aporte a capital
-        $interesMensual = $saldoCapital * $tem;
-        $aporteCapital = $cuotaMensual - $interesMensual;
-        $saldoCapital -= $aporteCapital;
-
-        // Acumular el interés total
-        $interesTotal += $interesMensual;
-    }
-    $montoTotalPagar = $montoCapital + $cuotaInicialSoles + $interesTotal;
-
-    // Paso 8: Preparar los datos para mostrar
-    $cronogramaPagos = [];
-    $saldoCapital = $montoCapital; // Resetear saldo capital para la generación del cronograma
-    for ($mes = 1; $mes <= $plazoMeses; $mes++) {
-        $interesMensual = $saldoCapital * $tem;
-        $aporteCapital = $cuotaMensual - $interesMensual;
-        $saldoCapital -= $aporteCapital;
-
-        // Almacenar el cronograma de pagos
-        $cronogramaPagos[] = [
-            "mes" => $mes,
-            "aporteCapital" => number_format($aporteCapital, 2),
-            "interesMensual" => number_format($interesMensual, 2),
-            "cuotaMensual" => number_format($cuotaMensual, 2),
-            "saldoCapital" => number_format($saldoCapital, 2),
-        ];
-    }
-
-    // Paso 9: Almacenar en la sesión
-    $_SESSION['datos_credito'] = $datos;
-    $_SESSION['cronograma_pagos'] = $cronogramaPagos;
-    $_SESSION['montoTotal'] = number_format($montoTotalPagar, 2);
-    $_SESSION['cuotaInicialSoles'] = number_format($cuotaInicialSoles, 2);
-    $_SESSION['totalCapitalPagado'] = number_format($montoCapital, 2);
-    $_SESSION['interesTotal'] = number_format($interesTotal, 2);
-    $_SESSION['monto_capital'] = number_format($montoCapital, 2);
-
-    // Mensaje de éxito
-    $msg = [
-        "tipo" => "success",
-        "texto" => "credito_hipotecario/confirmacion_credito.php"
-    ];
 
     echo json_encode($msg);
     return;
 }
 
+
+
+
+
+
+function insertar($pdo, $tabla, $datos)
+{
+    try {
+        // Primera inserción: Datos del cliente
+        $sql = $pdo->prepare("
+            INSERT INTO $tabla(
+                nombre, apellidos, dni, telefono, correo, fecha_nacimiento, tipo_ingreso, 
+                ingreso_mensual, estado_civil_id, departamento_id, provincia_id, distrito_id, direccion
+            ) 
+            VALUES (
+                :nombre, :apellidos, :dni, :telefono, :correo, :fechaNacimiento, :tipoIngreso, 
+                :ingresoMensual, :estadoCivil, :departamento, :provincia, :distrito, :direccion
+            )
+        ");
+
+        $sql->bindParam(':nombre', $datos['nombre']);
+        $sql->bindParam(':apellidos', $datos['apellidos']);
+        $sql->bindParam(':dni', $datos['dni']);
+        $sql->bindParam(':telefono', $datos['telefonoCliente']);
+        $sql->bindParam(':correo', $datos['emailCliente']);
+        $sql->bindParam(':fechaNacimiento', $datos['fechaNacimiento']);
+        $sql->bindValue(':tipoIngreso', null, PDO::PARAM_NULL);
+        $sql->bindParam(':ingresoMensual', $datos['ingresoMensual']);
+        $sql->bindParam(':estadoCivil', $datos['estadoCivil']);
+        $sql->bindParam(':departamento', $datos['departamento']);
+        $sql->bindParam(':provincia', $datos['provincia']);
+        $sql->bindParam(':distrito', $datos['distrito']);
+        $sql->bindParam(':direccion', $datos['direccionCliente']);
+
+        if (!$sql->execute()) {
+            throw new Exception("Error al insertar los datos del cliente: " . json_encode($sql->errorInfo()));
+        }
+
+        $cliente_id = $pdo->lastInsertId();
+
+        // Cálculo de TEA y TEM según el plazo
+        if ($datos['plazo'] >= 4 && $datos['plazo'] <= 10) {
+            $tea = 0.10;
+        } elseif ($datos['plazo'] >= 11 && $datos['plazo'] <= 20) {
+            $tea = 0.12;
+        } elseif ($datos['plazo'] >= 21 && $datos['plazo'] <= 25) {
+            $tea = 0.14;
+        } else {
+            $tea = 0;
+        }
+
+        $tem = (pow(1 + $tea, 1.0 / 12)) - 1;
+
+        // Segunda inserción: Datos del crédito hipotecario
+        $sql = $pdo->prepare("
+            INSERT INTO creditos_hipotecarios (
+                id_cliente, monto, cuota_ini, plazo, tea, tem, tipo_seguro
+            ) 
+            VALUES (
+                :id_cliente, :monto_credito, :cuota_ini, :plazo, :tea, :tem, :tipo_seguro
+            )
+        ");
+        $sql->bindParam(':id_cliente', $cliente_id);
+        $sql->bindParam(':monto_credito', $datos['monto_credito']);
+        $sql->bindParam(':cuota_ini', $datos['cuotaInicial']);
+        $sql->bindParam(':plazo', $datos['plazo']);
+        $sql->bindParam(':tea', $tea);
+        $sql->bindParam(':tem', $tem);
+        $sql->bindParam(':tipo_seguro', $datos['tipoSeguro']);
+
+        if (!$sql->execute()) {
+            throw new Exception("Error al insertar los datos del crédito hipotecario: " . json_encode($sql->errorInfo()));
+        }
+
+        $credito_id = $pdo->lastInsertId();
+
+        // Validación del tipo de seguro y cálculo de costo
+        $cost = 0;
+        if (!empty($datos['tipoSeguro'])) {
+            switch ($datos['tipoSeguro']) {
+                case '3':
+                    $cost = 0.015;
+                    break;
+                case '4':
+                    $cost = 0.02;
+                    break;
+            }
+        }
+
+        // Tercera inserción: Datos del seguro
+        $sql = $pdo->prepare("
+            INSERT INTO seguros (
+                tipo_seguro_id, id_credito_hipotecario, id_credito_vehicular, 
+                id_credito_estudio, id_deposito_plazo_fijo, costo
+            ) 
+            VALUES (
+                :tipo_seguro_id, :id_credito_hipotecario, :id_credito_vehicular, 
+                :id_credito_estudio, :id_deposito_plazo_fijo, :costo
+            )
+        ");
+        $tipo_seguro = (int)$datos['tipoSeguro'];
+        $sql->bindParam(':tipo_seguro_id', $tipo_seguro);
+        $sql->bindParam(':id_credito_hipotecario', $credito_id);
+        $sql->bindValue(':id_credito_vehicular', null, PDO::PARAM_NULL);
+        $sql->bindValue(':id_credito_estudio', null, PDO::PARAM_NULL);
+        $sql->bindValue(':id_deposito_plazo_fijo', null, PDO::PARAM_NULL);
+        $sql->bindParam(':costo', $cost);
+
+        if (!$sql->execute()) {
+            throw new Exception("Error al insertar los datos del seguro: " . json_encode($sql->errorInfo()));
+        }
+
+        // Éxito en todas las operaciones
+        $msg = array(
+            "tipo"  => "success",
+            "texto" => "Crédito creado satisfactoriamente."
+        );
+    } catch (Exception $e) {
+        // Manejo de errores con detalle
+        $msg = array(
+            "tipo"  => "error",
+            "texto" => $e->getMessage()
+        );
+    }
+
+    echo json_encode($msg);
+    return;
+}
+
+
+
+
+
+
+
+function calculosCredito($datos)
+{
+    // Cálculos
+    $cuotaInicialSoles = $datos['monto_credito'] * 0.1;
+    $montoCapital = $datos['monto_credito'] - $cuotaInicialSoles; // El capital restante después de la cuota inicial
+    if ($datos['plazo'] >= 4 && $datos['plazo'] <= 10) {
+        $tea = 0.10; // Tasa en formato numérico
+    } else if ($datos['plazo'] >= 11 && $datos['plazo'] <= 20) {
+        $tea = 0.12;
+    } else if ($datos['plazo'] >= 21 && $datos['plazo'] <= 25) {
+        $tea = 0.14;
+    } else {
+        $tea = 0;
+    }
+    $tem = (pow(1 + $tea, 1.0 / 12)) - 1;
+    $payment = $montoCapital * ($tem / (1 - pow(1 + $tem, -$datos['plazo']*12)));
+
+    $totalSeguroGenerado = 0;
+    $interesTotal = 0;
+    $totalCapitalPagado = 0;
+    $cronograma_pagos = [];
+    $fecha_inicio = new DateTime();
+
+    for ($i = 0; $i < $datos['plazo']*12; $i++) {
+        $interes = round($montoCapital * $tem, 2);
+        $cuotaMensual = round($payment, 2);
+        $capitalPagado = round($cuotaMensual - $interes, 2);
+        $montoCapital -= $capitalPagado;
+
+        // Si el saldo de capital es negativo, lo ajustamos a 0
+        if ($montoCapital < 0) {
+            $montoCapital = 0;
+        }
+
+        $interesTotal += $interes;
+        $totalCapitalPagado += $capitalPagado;
+
+        $fecha_pago = clone $fecha_inicio;
+        $fecha_pago->modify("+$i month");
+
+        $seguro = 0;
+
+        if (!empty($datos['tipoSeguro'])) {
+            // Inicializamos el seguro
+            $seguro = 0;
+        
+            // Verificamos y calculamos el seguro dependiendo del tipo
+            switch ($datos['tipoSeguro']) {
+                case '3': // Tipo 3: Desgravamen
+                    $seguro = round(0.015 * $montoCapital, 2); // 1.5%
+                    break;
+                case '4': // Tipo 4: Inmueble
+                    $seguro = round(0.02 * $montoCapital, 2); // 2%
+                    break;
+                default:
+                    // Validación para cualquier otro tipo de seguro
+                    $seguro = 0; // No aplica seguro
+                    break;
+            }
+        
+            // Acumulamos el seguro total generado
+            $totalSeguroGenerado += $seguro;
+        }
+
+        // Ajustar a enteros
+        $cronograma_pagos[] = [
+            'mes' => $fecha_pago->format('Y-m'),
+            'monto_capital' => number_format(round($capitalPagado, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'interes' => number_format(round($interes, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'cuota_mensual' => number_format(round($cuotaMensual + $seguro, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'saldo_capital' => number_format(round($montoCapital, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'seguro' => number_format(round($seguro, 0), 1, '.', '') // Redondeamos a enteros y agregamos ".0"
+        ];
+    }
+ 
+    $montoTotal = $cuotaInicialSoles + $totalCapitalPagado + $interesTotal + $totalSeguroGenerado;
+
+    // Almacenar los datos en la sesión
+    $_SESSION['datos_credito'] = $datos;
+    $_SESSION['cronograma_pagos'] = $cronograma_pagos;
+    $_SESSION['montoTotal'] = number_format(round($montoTotal, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['cuotaInicialSoles'] = number_format(round($cuotaInicialSoles, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['totalCapitalPagado'] = number_format(round($totalCapitalPagado, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['interesTotal'] = number_format(round($interesTotal, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['totalSeguroGenerado'] = number_format(round($totalSeguroGenerado, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+
+    // Respuesta de éxito
+    $msg = array(
+        "tipo"  => "success",
+        "texto" => "credito_hipotecario/confirmacion_credito.php",
+        "texto1" => $datos['tipoSeguro']
+    );
+
+    echo json_encode($msg);
+    return;
+}
+
+
+
+
+function verCronograma($pdo, $tabla, $datos)
+{
+
+    $sql = $pdo->prepare("SELECT * FROM $tabla c INNER JOIN creditos_hipotecarios ch ON c.cliente_id = ch.id_cliente  INNER JOIN seguros s ON ch.id_credito_hipotecario= s.id_credito_hipotecario WHERE c.dni = :dni");
+    $sql->bindParam(':dni', $datos['dni']);
+
+    $sql->execute();
+    $cliente = $sql->fetch(PDO::FETCH_ASSOC);
+
+       // Cálculos
+    $cuotaInicialSoles = $cliente['monto'] * 0.1;
+    $montoCapital = $cliente['monto'] - $cuotaInicialSoles; // El capital restante después de la cuota inicial
+    if ($cliente['plazo'] >= 4 && $cliente['plazo'] <= 10) {
+        $tea = 0.10; // Tasa en formato numérico
+    } else if ($cliente['plazo'] >= 11 && $cliente['plazo'] <= 20) {
+        $tea = 0.12;
+    } else if ($cliente['plazo'] >= 21 && $cliente['plazo'] <= 25) {
+        $tea = 0.14;
+    } else {
+        $tea = 0;
+    }
+    $tem = (pow(1 + $tea, 1.0 / 12)) - 1;
+    $payment = $montoCapital * ($tem / (1 - pow(1 + $tem, -$cliente['plazo']*12)));
+
+    $totalSeguroGenerado = 0;
+    $interesTotal = 0;
+    $totalCapitalPagado = 0;
+    $cronograma_pagos = [];
+    $fecha_inicio = new DateTime();
+
+    for ($i = 0; $i < $cliente['plazo']*12; $i++) {
+        $interes = round($montoCapital * $tem, 2);
+        $cuotaMensual = round($payment, 2);
+        $capitalPagado = round($cuotaMensual - $interes, 2);
+        $montoCapital -= $capitalPagado;
+
+        // Si el saldo de capital es negativo, lo ajustamos a 0
+        if ($montoCapital < 0) {
+            $montoCapital = 0;
+        }
+
+        $interesTotal += $interes;
+        $totalCapitalPagado += $capitalPagado;
+
+        $fecha_pago = clone $fecha_inicio;
+        $fecha_pago->modify("+$i month");
+
+        $seguro = 0;
+
+        if (!empty($cliente['tipo_seguro'])) {
+            // Inicializamos el seguro
+            $seguro = 0;
+        
+            // Verificamos y calculamos el seguro dependiendo del tipo
+            switch ($cliente['tipo_seguro']) {
+                case '3': // Tipo 3: Desgravamen
+                    $seguro = round(0.015 * $montoCapital, 2); // 1.5%
+                    break;
+                case '4': // Tipo 4: Inmueble
+                    $seguro = round(0.02 * $montoCapital, 2); // 2%
+                    break;
+                default:
+                    // Validación para cualquier otro tipo de seguro
+                    $seguro = 0; // No aplica seguro
+                    break;
+            }
+        
+            // Acumulamos el seguro total generado
+            $totalSeguroGenerado += $seguro;
+        }
+
+        // Ajustar a enteros
+        $cronograma_pagos[] = [
+            'mes' => $fecha_pago->format('Y-m'),
+            'monto_capital' => number_format(round($capitalPagado, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'interes' => number_format(round($interes, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'cuota_mensual' => number_format(round($cuotaMensual + $seguro, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'saldo_capital' => number_format(round($montoCapital, 0), 1, '.', ''), // Redondeamos a enteros y agregamos ".0"
+            'seguro' => number_format(round($seguro, 0), 1, '.', '') // Redondeamos a enteros y agregamos ".0"
+        ];
+    }
+ 
+    $montoTotal = $cuotaInicialSoles + $totalCapitalPagado + $interesTotal + $totalSeguroGenerado;
+
+    // Almacenar los datos en la sesión
+    $_SESSION['datos_credito'] = $cliente;
+    $_SESSION['cronograma_pagos'] = $cronograma_pagos;
+    $_SESSION['montoTotal'] = number_format(round($montoTotal, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['cuotaInicialSoles'] = number_format(round($cuotaInicialSoles, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['totalCapitalPagado'] = number_format(round($totalCapitalPagado, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['interesTotal'] = number_format(round($interesTotal, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+    $_SESSION['totalSeguroGenerado'] = number_format(round($totalSeguroGenerado, 0), 1, '.', ''); // Redondeamos a enteros y agregamos ".0"
+
+    // Respuesta de éxito
+    $msg = array(
+        "tipo"  => "success",
+        "texto" => "credito_hipotecario/confirmacion_credito.php",
+        "texto1" => $cliente['tipo_seguro']
+    );
+
+    echo json_encode($msg);
+    return;
+}
 

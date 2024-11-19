@@ -166,8 +166,8 @@
             <button type="button" onclick="history.back()" class="cancel">Cancelar</button>
         </form>
 
-        <form method="POST" action="../controllers/generar_pdf.php" target="_blank">
-            <input type="hidden" name="cronograma" value="' . htmlspecialchars(serialize($cronograma_pagos)) . '">
+        <form method="POST" action="../../../SISTEMA-FINANCIERO/controller/generar_pdf_v.php" target="_blank">
+            <input type="hidden" name="cronograma" value='<?php echo htmlspecialchars(serialize($_SESSION['cronograma_pagos'])); ?>'>
             <button type="submit" name="generar_pdf">Generar PDF</button>
         </form>
     </div>
@@ -182,33 +182,35 @@
             e.preventDefault();
 
             let data = new FormData(e.target);
-            let cuota = <?php echo $_SESSION['cronograma_pagos'][0]['cuota_mensual']; ?>*2; // Calculamos el doble de la cuota
+            let cuota = <?php echo $_SESSION['cronograma_pagos'][0]['cuota_mensual']; ?> * 2; // Calculamos el doble de la cuota
             data.append("accion", "insertar");
-            if (data.get("ingresoMensual") >= cuota){
+            if (data.get("ingresoMensual") >= cuota) {
                 $.ajax({
-                type: "POST",
-                url: base_url,
-                data: data,
-                processData: false,
-                contentType: false,
-                success: function(response) {
-                    let res = JSON.parse(response);
+                    type: "POST",
+                    url: base_url,
+                    data: data,
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        let res = JSON.parse(response);
 
-                    // redireccionar a la página de confirmación
+                        // redireccionar a la página de confirmación
 
-                    if (res.tipo == "success") {
-                        alert("Se registro con exito")
-                        window.location.href = "<?php echo PAGES . "credito_vehicular/formulario_credito.php" ?>";
-                    } else {
-                        alert(res.texto);
+                        if (res.tipo == "success") {
+                            alert("Se registro con exito")
+                            alert($datos['tipoSeguro'])
+
+                            window.location.href = "<?php echo PAGES . "credito_vehicular/formulario_credito.php" ?>";
+                        } else {
+                            alert(res.texto);
+                        }
+
+
                     }
-
-
-                }
-            });
-            }else{
+                });
+            } else {
                 alert("Tu ingreso mensual es: " + data.get("ingresoMensual") + "y debe ser al menos el doble de la cuota mensual para continuar.");
-                return false; 
+                return false;
             }
 
         });

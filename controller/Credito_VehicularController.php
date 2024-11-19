@@ -118,7 +118,8 @@ function insertar($pdo, $tabla, $datos)
         $tabla2 = "credito_vehicular";
         $cliente_id = $pdo->lastInsertId();
 
-        $sql = $pdo->prepare("INSERT INTO  $tabla2 (id_cliente,  tipo_seguro,  proveedor_seguro,  monto,  cuota_ini,  tea,  tem,  marca,  modelo, plazo_mes) VALUES (:id_cliente,  :tipo_seguro,  :proveedor_seguro,  :monto,  :cuota_ini,  :tea,  :tem,  :marca,  :modelo, :plazo_mes)");
+        $sql = $pdo->prepare("INSERT INTO  $tabla2 (id_cliente,  tipo_seguro,  proveedor_seguro,  monto,  cuota_ini,  tea,  tem,  marca,  modelo, plazo_mes) 
+        VALUES (:id_cliente,  :tipo_seguro,  :proveedor_seguro,  :monto,  :cuota_ini,  :tea,  :tem,  :marca,  :modelo, :plazo_mes)");
         $sql->bindParam(':id_cliente', $cliente_id);
         $sql->bindParam(':tipo_seguro', $datos['tipoSeguro']);
         $sql->bindValue(':proveedor_seguro', null, PDO::PARAM_NULL);
