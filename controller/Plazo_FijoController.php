@@ -42,6 +42,31 @@ switch ($accion) {
         break;
 }
 
+function buscar($pdo, $tabla, $datos)
+{
+    $sql = $pdo->prepare("SELECT * FROM $tabla c INNER JOIN deposito_plazo_fijo dp ON c.cliente_id = dp.id_cliente  INNER JOIN seguros s ON dp.id_deposito_plazo_fijo = s.id_deposito_plazo_fijo WHERE c.dni = :dni");
+    $sql->bindParam(':dni', $datos['dni']);
+    $sql->execute();
+    $cliente = $sql->fetch(PDO::FETCH_ASSOC);
+
+    if ($cliente) {
+        $msg = array(
+            "tipo"  => "success",
+            "data" => $cliente
+        );
+    } else {
+        $msg = array(
+            "tipo"  => "error",
+            "texto" => "No se encontró al cliente"
+        );
+    }
+
+    echo json_encode($msg);
+    return;
+}
+
+
+
 function calculosCredito($datos) {
     $cuotaInicial = isset($datos['cuotaInicial']) ? (float)$datos['cuotaInicial'] : 0;
     $plazoAnios = isset($datos['plazoAnios']) ? (int)$datos['plazoAnios'] : 0;
@@ -132,21 +157,8 @@ function insertar($pdo, $tabla, $datos)
         $plazoAnios = isset($datos['plazoAnios']) ? (int)$datos['plazoAnios'] : 0;
         $tipoSeguro = isset($datos['tipoSeguro']) ? (int)$datos['tipoSeguro'] : null;
 
-        // Calcular la tasa de interés (TEA) según el plazo
-        if ($plazoAnios > 0) {
-            if ($plazoAnios <= 5) {
-                $tea = 0.03; // 3% anual
-            } elseif ($plazoAnios <= 10) {
-                $tea = 0.04; // 4% anual
-            } else {
-                $tea = 0.05; // 5% anual
-            }
-        } else {
-            $tea = 0; // Sin interés si el plazo no es válido
-        }
-
-        // Asignar el valor del seguro si aplica
-        $seguro = ($tipoSeguro == 5) ? 0.077 : 0;
+        // Calcular TEA
+        $tea = $plazoAnios > 10 ? 0.05 : ($plazoAnios > 5 ? 0.04 : 0.03);
 
         // Iniciar transacción
         $pdo->beginTransaction();
@@ -164,29 +176,25 @@ function insertar($pdo, $tabla, $datos)
         ";
 
         $stmtCliente = $pdo->prepare($sqlCliente);
-
-        // Asignación de valores
-        $stmtCliente->bindParam(':nombre', $datos['nombre']);
-        $stmtCliente->bindParam(':apellidos', $datos['apellidos']);
-        $stmtCliente->bindParam(':dni', $datos['dni']);
-        $stmtCliente->bindParam(':telefono', $datos['telefonoCliente']);
-        $stmtCliente->bindParam(':correo', $datos['emailCliente']);
-        $stmtCliente->bindParam(':fechaNacimiento', $datos['fechaNacimiento']);
-        $stmtCliente->bindValue(':tipoIngreso', null, PDO::PARAM_NULL); // Cambiar si es necesario
-        $stmtCliente->bindParam(':ingresoMensual', $datos['ingresoMensual']);
-        $stmtCliente->bindParam(':estadoCivil', $datos['estadoCivil']);
-        $stmtCliente->bindParam(':departamento', $datos['departamento']);
-        $stmtCliente->bindParam(':provincia', $datos['provincia']);
-        $stmtCliente->bindParam(':distrito', $datos['distrito']);
-        $stmtCliente->bindParam(':direccion', $datos['direccionCliente']);
-
-        if (!$stmtCliente->execute()) {
-            throw new Exception("Error al insertar cliente: " . json_encode($stmtCliente->errorInfo()));
-        }
+        $stmtCliente->execute([
+            ':nombre' => $datos['nombre'],
+            ':apellidos' => $datos['apellidos'],
+            ':dni' => $datos['dni'],
+            ':telefono' => $datos['telefonoCliente'],
+            ':correo' => $datos['emailCliente'],
+            ':fechaNacimiento' => $datos['fechaNacimiento'],
+            ':tipoIngreso' => null,
+            ':ingresoMensual' => $datos['ingresoMensual'],
+            ':estadoCivil' => $datos['estadoCivil'],
+            ':departamento' => $datos['departamento'],
+            ':provincia' => $datos['provincia'],
+            ':distrito' => $datos['distrito'],
+            ':direccion' => $datos['direccionCliente']
+        ]);
 
         $cliente_id = $pdo->lastInsertId();
 
-        // Segunda inserción: Datos del crédito hipotecario
+        // Segunda inserción: Datos del depósito
         $sqlCredito = "
             INSERT INTO deposito_plazo_fijo (
                 id_cliente, tipo_seguro, monto_deposito, plazo, tea
@@ -197,33 +205,57 @@ function insertar($pdo, $tabla, $datos)
         ";
 
         $stmtCredito = $pdo->prepare($sqlCredito);
-        $stmtCredito->bindParam(':id_cliente', $cliente_id);
-        $stmtCredito->bindParam(':tipo_seguro', $tipoSeguro);
-        $stmtCredito->bindParam(':montoDeposito', $cuotaInicial);
-        $stmtCredito->bindParam(':plazo', $plazoAnios);
-        $stmtCredito->bindParam(':tea', $tea);
+        $stmtCredito->execute([
+            ':id_cliente' => $cliente_id,
+            ':tipo_seguro' => $tipoSeguro,
+            ':montoDeposito' => $cuotaInicial,
+            ':plazo' => $plazoAnios,
+            ':tea' => $tea
+        ]);
 
-        if (!$stmtCredito->execute()) {
-            throw new Exception("Error al insertar crédito hipotecario: " . json_encode($stmtCredito->errorInfo()));
-        }
+        $credito_id = $pdo->lastInsertId();
+
+        // Tercera inserción: Datos del seguro
+        $cost = $tipoSeguro === 5 ? 0.077 : 0;
+
+        $sqlSeguro = "
+            INSERT INTO seguros (
+                tipo_seguro_id, id_credito_hipotecario, id_credito_vehicular, 
+                id_credito_estudio, id_deposito_plazo_fijo, costo
+            ) 
+            VALUES (
+                :tipo_seguro_id, NULL, NULL, NULL, :id_deposito_plazo_fijo, :costo
+            )
+        ";
+
+        $stmtSeguro = $pdo->prepare($sqlSeguro);
+        $stmtSeguro->execute([
+            ':tipo_seguro_id' => $tipoSeguro,
+            ':id_deposito_plazo_fijo' => $credito_id,
+            ':costo' => $cost
+        ]);
 
         // Confirmar transacción
         $pdo->commit();
 
-        // Mensaje de éxito
         $msg = array(
             "tipo"  => "success",
-            "texto" => "Crédito creado satisfactoriamente."
+            "texto" => "Datos insertados satisfactoriamente."
         );
     } catch (PDOException $e) {
-        $pdo->rollBack(); // Revertir cambios en caso de error
+        // Verificar si hay transacción activa antes de revertir
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $msg = array(
             "tipo"  => "error",
             "texto" => "Error en la base de datos: " . $e->getMessage(),
             "trace" => $e->getTraceAsString()
         );
     } catch (Exception $e) {
-        $pdo->rollBack(); // Revertir cambios en caso de error
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         $msg = array(
             "tipo"  => "error",
             "texto" => "Error general: " . $e->getMessage(),
@@ -235,4 +267,103 @@ function insertar($pdo, $tabla, $datos)
     echo json_encode($msg);
     return;
 }
+
+function verCronograma($pdo, $tabla, $datos)
+{
+    try {
+        // Validar parámetros básicos
+        if (!$pdo || !$tabla || empty($datos['dni'])) {
+            throw new InvalidArgumentException("Parámetros inválidos: Verifica la conexión PDO, la tabla y el DNI.");
+        }
+
+        // Consultar los datos del cliente
+        $sql = $pdo->prepare("
+            SELECT * 
+            FROM $tabla c 
+            INNER JOIN deposito_plazo_fijo dp ON c.cliente_id = dp.id_cliente
+            INNER JOIN seguros s ON dp.id_deposito_plazo_fijo = s.id_deposito_plazo_fijo
+            WHERE c.dni = :dni
+        ");
+        $sql->bindParam(':dni', $datos['dni']);
+        $sql->execute();
+
+        $cliente = $sql->fetch(PDO::FETCH_ASSOC);
+
+        if (!$cliente) {
+            throw new Exception("No se encontraron datos para el cliente con DNI: {$datos['dni']}");
+        }
+
+        // Cálculos iniciales
+        $cuotaInicial = isset($cliente['monto_deposito']) ? (float)$cliente['monto_deposito'] : 0;
+        $plazoAnios = isset($cliente['plazo']) ? (int)$cliente['plazo'] : 0;
+        $tipoSeguro = isset($cliente['tipo_seguro']) ? (int)$cliente['tipo_seguro'] : null;
+
+        // Calcular la tasa de interés anual (TEA) según el plazo
+        $tea = 0; // Valor predeterminado
+        if ($plazoAnios >= 1 && $plazoAnios <= 5) {
+            $tea = 0.03; // 3%
+        } elseif ($plazoAnios >= 6 && $plazoAnios <= 10) {
+            $tea = 0.04; // 4%
+        } elseif ($plazoAnios > 10) {
+            $tea = 0.05; // 5%
+        }
+
+        // Asignar el valor del seguro
+        $seguro = ($tipoSeguro == 5) ? 0.077 : 0;
+
+        // Inicializar variables para el cronograma
+        $cronograma_pagos = [];
+        $capitalActual = $cuotaInicial; // Capital inicial
+
+        $totalIntereses = 0;
+        $totalSeguro = 0;
+
+        // Generar cronograma de pagos
+        for ($i = 1; $i <= $plazoAnios; $i++) {
+            $interesAnual = round($capitalActual * $tea, 2); // Calcular interés
+            $capitalFinal = round($capitalActual + $interesAnual + $seguro, 2); // Agregar seguro al capital final
+
+            // Sumar totales acumulados
+            $totalIntereses += $interesAnual;
+            $totalSeguro += $seguro;
+
+            // Agregar al cronograma
+            $cronograma_pagos[] = [
+                'año' => $i,
+                'capital_inicial' => round($capitalActual, 2),
+                'tasa_interes' => ($tea * 100) . '%',
+                'interes_anual' => $interesAnual,
+                'seguro' => $seguro,
+                'capital_final' => $capitalFinal,
+            ];
+
+            $capitalActual = $capitalFinal; // Actualizar capital para el siguiente año
+        }
+
+        // Guardar datos en la sesión
+        $_SESSION['datos_credito'] = $cliente;
+        $_SESSION['cronograma_pagos'] = $cronograma_pagos;
+        $_SESSION['totalIntereses'] = round($totalIntereses, 2);
+        $_SESSION['totalSeguro'] = round($totalSeguro, 2);
+
+        // Devolver respuesta exitosa
+        echo json_encode([
+            "tipo" => "success",
+            "texto" => "plazo_fijo/confirmacion_credito.php",
+            "totalIntereses" => round($totalIntereses, 2),
+            "totalSeguro" => round($totalSeguro, 2)
+        ]);
+    } catch (PDOException $e) {
+        echo json_encode([
+            "tipo" => "error",
+            "texto" => "Error en la base de datos: " . $e->getMessage()
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            "tipo" => "error",
+            "texto" => $e->getMessage()
+        ]);
+    }
+}
+
 

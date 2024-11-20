@@ -112,7 +112,7 @@ require_once "../../config/config.php";
 <body>
 
     <header>
-        <h1>Consultar Crédito Vehicular</h1>
+        <h1>Consultar Deposito a plazo</h1>
     </header>
 
     <main>
@@ -137,13 +137,10 @@ require_once "../../config/config.php";
                 <table id="tablaResultadoCredito">
                     <thead>
                         <tr>
-                            <th>Marca Vehiculo</th>
-                            <th>Modelo Vehiculo</th>
-                            <th>Monto Total</th>
-                            <th>Porcentaje de cuota inicial</th>
-                            <th>Plazo de Meses</th>
+                            <th>Cuota inicial</th>
+                            <th>Plazo</th>
                             <th>Tea</th>
-                            <th>Tipo de Seguro</th>
+                            <th>Tipo</th>
                             <th>Fecha de solicitud</th>
                             <th>Accion</th>
                         </tr>
@@ -158,7 +155,7 @@ require_once "../../config/config.php";
 
     <script>
         //INICIALIZAR
-        const base_url = "<?php echo CONTROLLERS . "Credito_VehicularController.php" ?>";
+        const base_url = "<?php echo CONTROLLERS . "Plazo_FijoController.php" ?>";
 
         if ($('#resultadoNombres').text() == "") {
             $('#listadoResultadoCliente').hide();
@@ -184,7 +181,7 @@ require_once "../../config/config.php";
 
                     if (res.tipo == "success") {
                         // redireccionar a la página de confirmación
-                        window.location.href = "<?php echo PAGES . "credito_vehicular/cronograma_credito.php" ?>";
+                        window.location.href = "<?php echo PAGES . "plazo_fijo/cronograma_credito.php" ?>";
                     } else {
                         alert(res.texto);
                     }
@@ -229,11 +226,8 @@ require_once "../../config/config.php";
 
                         let fila = `
                             <tr>
-                                <td>${res.data.marca}</td>
-                                <td>${res.data.modelo}</td>
-                                <td>${res.data.monto}</td>
-                                <td>${res.data.cuota_ini}</td>
-                                <td>${res.data.plazo_mes}</td>
+                                <td>${res.data.monto_deposito}</td>
+                                <td>${res.data.plazo}</td>
                                 <td>${res.data.tea}</td>
                                 <td>${res.data.tipo_seguro}</td>
                                 <td>2024-11-25</td>
